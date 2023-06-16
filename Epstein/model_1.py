@@ -1,39 +1,9 @@
+import random
+from agent import Agent
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-
-
-class Agent:
-    def __init__(self, hardship, legitimacy, risk_aversion, vision, x_0, y_0) -> None:
-        self.hardship = hardship
-        self.legitimacy = legitimacy
-        self.grievance = hardship * (1 - legitimacy)
-        self.risk_aversion = risk_aversion
-        self.vision = vision
-        self.x = x_0
-        self.y = y_0
-        self.active = False
-
-    def field_of_vision(self, grid):
-        fov = []
-        for dx in range(-self.vision, self.vision + 1):
-            for dy in range(-self.vision, self.vision + 1):
-                nx, ny = self.x + dx, self.y + dy
-                if (
-                    0 <= nx < grid.shape[0]
-                    and 0 <= ny < grid.shape[1]
-                    and (dx != 0 or dy != 0)  # Exclude agent's own position
-                ):
-                    fov.append(grid[nx, ny])
-
-        return fov
-
-
-class Cop:
-    def __init__(self, vision, x_0, y_0) -> None:
-        self.vision = vision
-        self.x = x_0
-        self.y = y_0
+from cop import Cop
 
 
 class Grid:
@@ -44,7 +14,15 @@ class Grid:
 
 class Model:
     def __init__(
-        self, n_agents, n_cops, grid_size, legitimacy, agent_vision, cop_vision
+        self,
+        n_agents,
+        n_cops,
+        grid_size,
+        legitimacy,
+        agent_vision,
+        cop_vision,
+        threshold,
+        k,
     ):
         self.agents = []
         self.cops = []
@@ -52,6 +30,8 @@ class Model:
         self.legitimacy = legitimacy
         self.agent_vision = agent_vision
         self.cop_vision = cop_vision
+        self.k = k
+        self.threshold = threshold
         self.grid = np.empty((grid_size, grid_size), dtype=object)
         self.grid.fill(None)
 
@@ -76,8 +56,10 @@ class Model:
                 legitimacy=self.legitimacy,
                 risk_aversion=risk_aversion,
                 vision=self.agent_vision,
-                x_0=x,
-                y_0=y,
+                x=x,
+                y=y,
+                threshold=self.threshold,
+                k=self.k,
             )
 
             self.grid[x, y] = agent
@@ -90,6 +72,18 @@ class Model:
             if self.grid[x, y] is None:
                 return x, y
 
+    def step(self):
+        self.agents_and_cops = self.agents + self.cops
+
+        random.shuffle(self.agents + self.cops)
+
+        # Iterate through all agents and cops
+        for entity, _, _ in self.agents + self.cops:
+            # Move the entity
+            entity.move(self.grid)
+            if isinstance(entity, Agent):
+                entity.action(self.grid)
+
     def run(self, n_steps):
         conflict_history = []
 
@@ -97,26 +91,62 @@ class Model:
         bounds = [0, 1, 2, 3, 4]
         norm = mcolors.BoundaryNorm(bounds, cmap.N)
         plt.figure()
+        fig, ax = plt.subplots()
+
+        grid_image = ax.imshow(
+            [
+                [self.get_plot_color(x, y) for y in range(self.grid_size)]
+                for x in range(self.grid_size)
+            ],
+            cmap=cmap,
+            norm=norm,
+            origin="lower",
+            extent=[0, self.grid_size, 0, self.grid_size],
+        )
+        text_active = ax.text(
+            0.5,
+            -0.1,
+            "",
+            horizontalalignment="center",
+            verticalalignment="center",
+            transform=ax.transAxes,
+        )
+        text_activated = ax.text(
+            0.5,
+            -0.15,
+            "",
+            horizontalalignment="center",
+            verticalalignment="center",
+            transform=ax.transAxes,
+        )
+
+        plt.title("Social Conflict Model")
+        plt.xlabel("X", fontsize=10)
+        plt.ylabel("Y", fontsize=10)
+        plt.xticks(range(self.grid_size + 1), fontsize=8)
+        plt.yticks(range(self.grid_size + 1), fontsize=8)
+        plt.grid(color="white", linewidth=1)
+
+        plt.show(block=False)
 
         for step in range(n_steps):
-            plt.imshow(
+            active_agents_before = sum(1 for agent, _, _ in self.agents if agent.active)
+            self.step()
+            active_agents_after = sum(1 for agent, _, _ in self.agents if agent.active)
+            grid_image.set_array(
                 [
                     [self.get_plot_color(x, y) for y in range(self.grid_size)]
                     for x in range(self.grid_size)
-                ],
-                cmap=cmap,
-                norm=norm,
-                origin="lower",
-                extent=[0, self.grid_size, 0, self.grid_size],
+                ]
             )
-            plt.title(f"Step {step+1}")
-            plt.xlabel("X", fontsize=10)
-            plt.ylabel("Y", fontsize=10)
-            plt.xticks(range(self.grid_size + 1), fontsize=8)
-            plt.yticks(range(self.grid_size + 1), fontsize=8)
-            plt.grid(color="white", linewidth=1)
+            text_active.set_text(f"Total Active Agents: {active_agents_before}")
+            text_activated.set_text(
+                f"Activated Agents: {active_agents_after - active_agents_before}"
+            )
 
-            plt.show()
+            plt.pause(0.1)
+
+        # plt.show()
 
         return conflict_history
 
@@ -134,5 +164,5 @@ class Model:
 
 
 if __name__ == "__main__":
-    model = Model(20, 5, 40, 0.5, 1, 1)
-    model.run(10)
+    model = Model(70, 10, 40, 0.9, 1, 1, 0.1, 2.3)
+    model.run(30)
