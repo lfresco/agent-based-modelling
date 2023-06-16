@@ -15,8 +15,8 @@ class Grid:
 class Model:
     def __init__(
         self,
-        n_agents,
-        n_cops,
+        pop_density,
+        cop_density,
         grid_size,
         legitimacy,
         agent_vision,
@@ -24,6 +24,18 @@ class Model:
         threshold,
         k,
     ):
+        """Constructor for Model class
+
+        Args:
+            pop_density (double): specifies the density of the agents following Epstein's implementation
+            cop_density (double): specifies cop density wrt the grid size
+            grid_size (integer): the size of the grid
+            legitimacy (_type_): percievied legitimacy of the regime by the agents
+            agent_vision (_type_): number of squares the agent can see
+            cop_vision (_type_): number of squares the cop can see
+            threshold (_type_): the threshold at which agents activate or go quiet
+            k (_type_): constant that help in computing probability
+        """
         self.agents = []
         self.cops = []
         self.grid_size = grid_size
@@ -32,20 +44,34 @@ class Model:
         self.cop_vision = cop_vision
         self.k = k
         self.threshold = threshold
+        self.n_agents = int(pop_density * (grid_size * grid_size))
+        self.n_cops = int(cop_density * (grid_size * grid_size))
         self.grid = np.empty((grid_size, grid_size), dtype=object)
         self.grid.fill(None)
 
-        self.initialize_agents(n_agents)
-        self.initialize_cops(n_cops)
+        self.initialize_agents(self.n_agents)
+        self.initialize_cops(self.n_cops)
 
-    def initialize_cops(self, n_cops):
+    def initialize_cops(self, n_cops: int) -> None:
+        """Function that takes an integer representing the number of cops and
+           randomely places them inside the grid
+
+        Args:
+            n_cops (integer): the number of cops that will be used in the model
+        """
         for _ in range(n_cops):
             x, y = self.get_random_empty_location()
             cop = Cop(self.cop_vision, x, y)
             self.grid[x, y] = cop
             self.cops.append((cop, x, y))
 
-    def initialize_agents(self, n_agents):
+    def initialize_agents(self, n_agents: int) -> None:
+        """Function that takes an integer representing the number of cops and
+           randomely places them inside the grid
+
+        Args:
+            n_cops (integer): the number of cops that will be used in the model
+        """
         for _ in range(n_agents):
             hardship = np.random.uniform()
 
@@ -118,6 +144,7 @@ class Model:
             horizontalalignment="center",
             verticalalignment="center",
             transform=ax.transAxes,
+            fontsize=8,
         )
 
         plt.title("Social Conflict Model")
@@ -164,5 +191,19 @@ class Model:
 
 
 if __name__ == "__main__":
-    model = Model(70, 10, 40, 0.9, 1, 1, 0.1, 2.3)
+    grid_size = 40
+    pop_density = 0.7
+
+    cop_density = 0.04
+
+    model = Model(
+        pop_density=pop_density,
+        cop_density=cop_density,
+        grid_size=grid_size,
+        legitimacy=0.9,
+        cop_vision=1,
+        agent_vision=1,
+        threshold=0.1,
+        k=2.3,
+    )
     model.run(30)
