@@ -49,11 +49,12 @@ class Agent(Entity):
             elif isinstance(element, Cop):
                 n_cops += 1
             else:
-                n_agents += 1
+                if element.active:
+                    n_agents += 1
 
         c_a_v = n_cops / n_agents  # Ratio between number of cops and number of agents
 
-        P = 1 - math.exp(self.k * c_a_v)  # Estimated probability of being arrested
+        P = 1 - math.exp((self.k * c_a_v))  # Estimated probability of being arrested
 
         N = P * self.risk_aversion  # Agent's net risk
 

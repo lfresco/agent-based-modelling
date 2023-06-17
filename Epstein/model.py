@@ -100,19 +100,29 @@ class Model:
 
     def run(self, n_steps):
         conflict_history = []
-
+        active_agents = []
+        agents = []
         for step in range(n_steps):
+            print(f"Iteration number : {step}")
             self.step()
 
-            self.grid.plot()
+            # self.grid.plot()
+            active_agents.append(self.grid.get_number_of_active_agents())
+            agents.append(self.grid.get_number_of_agents())
 
-            print(f"Number of cops : {self.grid.get_number_of_cops()}")
-            print(
-                f"Number of active agents : {self.grid.get_number_of_active_agents()}"
-            )
-            print(f"Number of agents : {self.grid.get_number_of_agents()}")
-            print("##################################")
+        import matplotlib.pyplot as plt
 
+        plt.plot(range(0, len(active_agents)), active_agents, label="Active Agents")
+        plt.plot(range(0, len(active_agents)), agents, label="Agents")
+
+        # Customize the plot
+        plt.xlabel("Time")
+        plt.ylabel("Values")
+        plt.title("Time Series Plot")
+        plt.legend()
+
+        # Display the plot
+        plt.show()
         return conflict_history
 
     def get_plot_color(self, x, y):
@@ -140,8 +150,8 @@ if __name__ == "__main__":
         grid_size=grid_size,
         legitimacy=0.9,
         cop_vision=1,
-        agent_vision=7,
+        agent_vision=1,
         threshold=0.1,
         k=2.3,
     )
-    model.run(30)
+    model.run(1000)
