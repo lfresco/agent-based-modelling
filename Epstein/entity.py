@@ -22,9 +22,9 @@ class Entity:
                     continue
                 nx, ny = self.x + dx, self.y + dy
                 if (
-                    0 <= nx < grid.shape[0]
-                    and 0 <= ny < grid.shape[1]
-                    and grid[nx, ny] is None
+                    0 <= nx < grid.grid_size
+                    and 0 <= ny < grid.grid_size
+                    and grid.get_cell_value(nx, ny) is None
                 ):
                     possible_moves.append((nx, ny))
 
@@ -32,8 +32,12 @@ class Entity:
         # stand still
         if possible_moves:
             new_x, new_y = possible_moves[np.random.choice(len(possible_moves), 1)[0]]
-            grid[self.x, self.y] = None  # Remove agent from current cell
-            grid[new_x, new_y] = self  # Move agent to the new cell
+            grid.update_cell_value(
+                self.x, self.y, None
+            )  # Remove agent from current cell
+
+            grid.update_cell_value(new_x, new_y, self)  # Move agent to the new cell
+
             self.x = new_x
             self.y = new_y
 
@@ -54,11 +58,10 @@ class Entity:
             for dy in range(-self.vision, self.vision + 1):
                 nx, ny = self.x + dx, self.y + dy
                 if (
-                    0 <= nx < grid.shape[0]
-                    and 0 <= ny < grid.shape[1]
+                    0 <= nx < grid.grid_size
+                    and 0 <= ny < grid.grid_size
                     and (dx != 0 or dy != 0)  # Exclude agent's own position
                 ):
-                    fov.append(grid[nx, ny])
+                    fov.append(grid.get_cell_value(nx, ny))
 
         return fov
-        pass

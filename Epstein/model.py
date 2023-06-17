@@ -4,12 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from cop import Cop
-
-
-class Grid:
-    def __init__(self, grid_size):
-        self.grid_size = grid_size
-        self.grid = np.empty((grid_size, grid_size), dtype=object)
+from grid import Grid
+import time
 
 
 class Model:
@@ -46,8 +42,7 @@ class Model:
         self.threshold = threshold
         self.n_agents = int(pop_density * (grid_size * grid_size))
         self.n_cops = int(cop_density * (grid_size * grid_size))
-        self.grid = np.empty((grid_size, grid_size), dtype=object)
-        self.grid.fill(None)
+        self.grid = Grid(grid_size)
 
         self.initialize_agents(self.n_agents)
         self.initialize_cops(self.n_cops)
@@ -60,9 +55,10 @@ class Model:
             n_cops (integer): the number of cops that will be used in the model
         """
         for _ in range(n_cops):
-            x, y = self.get_random_empty_location()
+            x, y = self.grid.get_random_empty_location()
             cop = Cop(self.cop_vision, x, y)
-            self.grid[x, y] = cop
+            self.grid.update_cell_value(x, y, cop)
+
             self.cops.append((cop, x, y))
 
     def initialize_agents(self, n_agents: int) -> None:
@@ -76,7 +72,7 @@ class Model:
             hardship = np.random.uniform()
 
             risk_aversion = np.random.uniform()
-            x, y = self.get_random_empty_location()
+            x, y = self.grid.get_random_empty_location()
             agent = Agent(
                 hardship=hardship,
                 legitimacy=self.legitimacy,
@@ -88,92 +84,34 @@ class Model:
                 k=self.k,
             )
 
-            self.grid[x, y] = agent
+            self.grid.update_cell_value(x, y, agent)
             self.agents.append((agent, x, y))
 
-    def get_random_empty_location(self):
-        while True:
-            x = np.random.randint(0, self.grid_size)
-            y = np.random.randint(0, self.grid_size)
-            if self.grid[x, y] is None:
-                return x, y
-
     def step(self):
-        self.agents_and_cops = self.agents + self.cops
-
-        random.shuffle(self.agents + self.cops)
+        self.agents, self.cops = self.grid.get_agents_and_cops()
+        agents_and_cops = self.agents + self.cops
+        random.shuffle(agents_and_cops)
 
         # Iterate through all agents and cops
-        for entity, _, _ in self.agents + self.cops:
+        for entity in agents_and_cops:
             # Move the entity
             entity.move(self.grid)
-            if isinstance(entity, Agent):
-                entity.action(self.grid)
+            entity.action(self.grid)
 
     def run(self, n_steps):
         conflict_history = []
 
-        cmap = mcolors.ListedColormap(["sandybrown", "blue", "red", "black"])
-        bounds = [0, 1, 2, 3, 4]
-        norm = mcolors.BoundaryNorm(bounds, cmap.N)
-        plt.figure()
-        fig, ax = plt.subplots()
-
-        grid_image = ax.imshow(
-            [
-                [self.get_plot_color(x, y) for y in range(self.grid_size)]
-                for x in range(self.grid_size)
-            ],
-            cmap=cmap,
-            norm=norm,
-            origin="lower",
-            extent=[0, self.grid_size, 0, self.grid_size],
-        )
-        text_active = ax.text(
-            0.5,
-            -0.1,
-            "",
-            horizontalalignment="center",
-            verticalalignment="center",
-            transform=ax.transAxes,
-        )
-        text_activated = ax.text(
-            0.5,
-            -0.15,
-            "",
-            horizontalalignment="center",
-            verticalalignment="center",
-            transform=ax.transAxes,
-            fontsize=8,
-        )
-
-        plt.title("Social Conflict Model")
-        plt.xlabel("X", fontsize=10)
-        plt.ylabel("Y", fontsize=10)
-        plt.xticks(range(self.grid_size + 1), fontsize=8)
-        plt.yticks(range(self.grid_size + 1), fontsize=8)
-        plt.grid(color="white", linewidth=1)
-
-        plt.show(block=False)
-
         for step in range(n_steps):
-            active_agents_before = sum(1 for agent, _, _ in self.agents if agent.active)
             self.step()
-            active_agents_after = sum(1 for agent, _, _ in self.agents if agent.active)
-            grid_image.set_array(
-                [
-                    [self.get_plot_color(x, y) for y in range(self.grid_size)]
-                    for x in range(self.grid_size)
-                ]
-            )
-            text_active.set_text(f"Total Active Agents: {active_agents_before}")
-            text_activated.set_text(
-                f"Activated Agents: {active_agents_after - active_agents_before}"
-            )
 
-            plt.pause(0.1)
+            self.grid.plot()
 
-        # plt.show()
+            print(f"Number of cops : {self.grid.get_number_of_cops()}")
+            print(
+                f"Number of active agents : {self.grid.get_number_of_active_agents()}"
+            )
+            print(f"Number of agents : {self.grid.get_number_of_agents()}")
+            print("##################################")
 
         return conflict_history
 
@@ -192,9 +130,9 @@ class Model:
 
 if __name__ == "__main__":
     grid_size = 40
-    pop_density = 0.7
+    pop_density = 0.9
 
-    cop_density = 0.04
+    cop_density = 0.01
 
     model = Model(
         pop_density=pop_density,
@@ -202,7 +140,7 @@ if __name__ == "__main__":
         grid_size=grid_size,
         legitimacy=0.9,
         cop_vision=1,
-        agent_vision=1,
+        agent_vision=7,
         threshold=0.1,
         k=2.3,
     )

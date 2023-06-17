@@ -1,7 +1,6 @@
 import math
 import numpy as np
 from entity import Entity
-from cop import Cop
 
 
 class Agent(Entity):
@@ -31,6 +30,8 @@ class Agent(Entity):
         self.k = k
 
     def action(self, grid):
+        from cop import Cop
+
         """Method that at each iteration determinates if the agent
            will activate or not
 
