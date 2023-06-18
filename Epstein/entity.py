@@ -16,20 +16,22 @@ class Entity:
 
         possible_moves = []  # Will contain possible coordinates of empty squares
 
+        grid_size = grid.grid_size
+
         for dx in range(-self.vision, self.vision + 1):
             for dy in range(-self.vision, self.vision + 1):
                 if dx == 0 and dy == 0:
                     continue
-                nx, ny = self.x + dx, self.y + dy
-                if (
-                    0 <= nx < grid.grid_size
-                    and 0 <= ny < grid.grid_size
-                    and grid.get_cell_value(nx, ny) is None
-                ):
+                nx = (
+                    self.x + dx
+                ) % grid_size  # Wrap x coordinate around grid boundaries
+                ny = (
+                    self.y + dy
+                ) % grid_size  # Wrap y coordinate around grid boundaries
+                if grid.get_cell_value(nx, ny) is None:
                     possible_moves.append((nx, ny))
 
-        # If there are not empty squares surrounding the agent it will
-        # stand still
+        # If there are no empty squares surrounding the agent, it will stand still
         if possible_moves:
             new_x, new_y = possible_moves[np.random.choice(len(possible_moves), 1)[0]]
             grid.update_cell_value(
